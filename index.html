@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no">
-<title>Chalkline — Workout Log</title>
+<title>Liftee — Workout Log</title>
 
 <!-- iOS "Add to Home Screen" behavior -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Chalkline">
+<meta name="apple-mobile-web-app-title" content="Liftee">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#15161B">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Fraunces:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
@@ -47,7 +47,7 @@
     padding: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
     width: 100%;
@@ -75,14 +75,14 @@
   }
 
   h1, h2, h3 {
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-weight: 600;
     margin: 0;
     letter-spacing: 0.2px;
   }
 
   .num {
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -98,18 +98,13 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
+    cursor: pointer;
   }
   .brand h1 {
-    font-size: 22px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  .brand .mark {
-    width: 10px;
-    height: 10px;
-    background: var(--accent);
-    display: inline-block;
-    transform: rotate(45deg);
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
   }
   .topbar-right { display: flex; align-items: center; gap: 12px; }
   .unit-toggle {
@@ -122,7 +117,7 @@
     background: none;
     border: none;
     color: var(--ink-dim);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 12px;
     font-weight: 600;
     padding: 6px 12px;
@@ -161,12 +156,6 @@
     text-align: center;
     padding: 20px;
   }
-  .login-mark {
-    width: 46px; height: 46px;
-    background: var(--accent);
-    transform: rotate(45deg);
-    margin-bottom: 30px;
-  }
   .login-wrap h2 {
     font-size: 26px;
     text-transform: uppercase;
@@ -189,7 +178,7 @@
     border: none;
     border-radius: 8px;
     padding: 13px 22px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -230,7 +219,7 @@
     border: none;
     border-radius: var(--radius);
     padding: 20px;
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 19px;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -317,7 +306,7 @@
     background: none;
     border: none;
     color: var(--ink);
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 22px;
     font-weight: 600;
     width: 65%;
@@ -383,7 +372,7 @@
     border: 1px solid var(--line);
     border-radius: 999px;
     color: var(--ink-dim);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 12px;
     font-weight: 600;
     padding: 6px 12px;
@@ -419,7 +408,7 @@
     border: 1px solid var(--line);
     border-radius: 6px;
     color: var(--ink);
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 16px;
     text-align: center;
     padding: 7px 2px;
@@ -481,7 +470,7 @@
     transform: translateX(-50%);
     background: var(--accent);
     color: var(--accent-ink);
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-weight: 600;
     font-size: 14px;
     padding: 9px 14px;
@@ -499,7 +488,7 @@
     border: none;
     border-radius: 999px;
     color: var(--accent-ink);
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-weight: 700;
     font-size: 12px;
     padding: 5px 9px;
@@ -514,7 +503,7 @@
     border: none;
     border-radius: var(--radius);
     padding: 16px;
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 16px;
     font-weight: 600;
     text-transform: uppercase;
@@ -551,7 +540,7 @@
     background: none;
     border: none;
     color: var(--ink-faint);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Open Sans', sans-serif;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -700,7 +689,7 @@
 <div class="app">
 
   <div class="topbar">
-    <div class="brand"><span class="mark"></span><h1>Chalkline</h1></div>
+    <div class="brand" onclick="goHome()"><h1>Liftee</h1></div>
     <div class="topbar-right">
       <button class="settings-btn" id="settingsBtn" onclick="openSettings()">&#9881;</button>
     </div>
@@ -709,9 +698,8 @@
   <!-- ===== LOGIN ===== -->
   <div class="screen visible" id="screen-login">
     <div class="login-wrap">
-      <div class="login-mark"></div>
       <h2>Your Log, Your Sheet</h2>
-      <p>Sign in with Google to connect Chalkline to a private Google Sheet in your own Drive. Your workout data lives there — nowhere else.</p>
+      <p>Sign in with Google to connect Liftee to a private Google Sheet in your own Drive. Your workout data lives there — nowhere else.</p>
       <button class="google-btn" onclick="signIn()">
         <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8 3l6-6C34.5 5.1 29.5 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.6 18.9 12 24 12c3.1 0 5.9 1.1 8 3l6-6C34.5 5.1 29.5 3 24 3 16 3 9.1 7.6 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.4 0 10.3-1.9 14.1-5.1l-6.5-5.5C29.5 36.4 26.9 37 24 37c-5.2 0-9.6-3.1-11.3-7.9l-6.5 5C9.1 40.4 16 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.5 5.5C41.2 36 45 30.5 45 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
         Sign in with Google
@@ -893,6 +881,7 @@
 const GOOGLE_CLIENT_ID = "455918822553-b2obresfunqr096v5q7crel3g3khllk7.apps.googleusercontent.com";
 
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+// Kept as "Chalkline" (the app's old name) so existing users' spreadsheets are still found by this lookup.
 const FILE_NAME = "Chalkline Workout Data";
 const TAB_NAME = "WorkoutLog";
 const HEADER_ROW = ["Date","Workout Name","Duration","Exercise Name","Set Order","Weight","Reps","Distance","Seconds","Notes","Workout Notes","RPE"];
@@ -939,6 +928,8 @@ let state = {
 let accessToken = null;
 let spreadsheetId = null;
 let tokenClient = null;
+let tokenRefreshTimer = null;
+let authPurpose = 'manual'; // 'manual' | 'silent-restore' | 'background-refresh'
 let restInterval = null;
 let restRemaining = 0;
 let workoutTimerInterval = null;
@@ -957,6 +948,12 @@ function init(){
   const savedRest = Number(localStorage.getItem('chalkline_rest_default'));
   if(savedRest && REST_PRESETS.includes(savedRest)) state.restDefault = savedRest;
   updateRestDefaultChip();
+
+  const savedWorkout = localStorage.getItem('chalkline_active_workout');
+  if(savedWorkout){
+    try { state.activeWorkout = JSON.parse(savedWorkout); }
+    catch(e){ localStorage.removeItem('chalkline_active_workout'); }
+  }
 
   if(GOOGLE_CLIENT_ID.startsWith("PASTE_")){
     document.getElementById('setupNote').textContent = "Setup needed: add your Google Client ID inside the code (see setup guide).";
@@ -977,6 +974,9 @@ function setupGoogle(){
     scope: SCOPES,
     callback: onTokenResponse,
   });
+  if(localStorage.getItem('chalkline_had_session')){
+    attemptSilentRestore();
+  }
 }
 
 function setUnit(u){
@@ -1025,6 +1025,10 @@ function showScreen(name){
   if(name==='history') renderFullHistory();
 }
 
+function goHome(){
+  if(document.getElementById('bottomNav').classList.contains('visible')) showScreen('home');
+}
+
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1039,11 +1043,29 @@ function signIn(){
     return;
   }
   if(!tokenClient){ showToast("Still loading Google sign-in, try again in a moment"); return; }
+  authPurpose = 'manual';
   document.getElementById('loginStatus').textContent = "";
   tokenClient.requestAccessToken({prompt: ''});
 }
 
+function attemptSilentRestore(){
+  if(!tokenClient) return;
+  authPurpose = 'silent-restore';
+  tokenClient.requestAccessToken({prompt: 'none'});
+}
+
+function scheduleTokenRefresh(expiresInSeconds){
+  clearTimeout(tokenRefreshTimer);
+  const ms = Math.max(((expiresInSeconds || 3600) - 300) * 1000, 30000);
+  tokenRefreshTimer = setTimeout(()=>{
+    if(!tokenClient) return;
+    authPurpose = 'background-refresh';
+    tokenClient.requestAccessToken({prompt: 'none'});
+  }, ms);
+}
+
 function signOut(){
+  clearTimeout(tokenRefreshTimer);
   if(accessToken){
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
@@ -1051,6 +1073,10 @@ function signOut(){
   spreadsheetId = null;
   state.history = [];
   state.activeWorkout = null;
+  localStorage.removeItem('chalkline_active_workout');
+  localStorage.removeItem('chalkline_had_session');
+  clearInterval(workoutTimerInterval);
+  stopRest();
   document.getElementById('settingsBtn').classList.remove('visible');
   document.getElementById('bottomNav').classList.remove('visible');
   showScreen('login');
@@ -1058,10 +1084,18 @@ function signOut(){
 
 async function onTokenResponse(resp){
   if(resp.error){
-    document.getElementById('loginStatus').textContent = "Sign-in was cancelled or failed. Try again.";
+    if(authPurpose === 'manual'){
+      document.getElementById('loginStatus').textContent = "Sign-in was cancelled or failed. Try again.";
+    }
+    // silent-restore / background-refresh failures fail quietly — the login
+    // screen (with its normal Sign In button) is left as the fallback.
     return;
   }
   accessToken = resp.access_token;
+  scheduleTokenRefresh(resp.expires_in);
+  if(authPurpose === 'background-refresh') return;
+
+  localStorage.setItem('chalkline_had_session', '1');
   document.getElementById('loginStatus').textContent = "Connecting to your Google Sheet...";
   try {
     await connectSpreadsheet();
@@ -1098,7 +1132,14 @@ async function finishLogin(){
     await loadHistoryFromSheet();
     document.getElementById('settingsBtn').classList.add('visible');
     document.getElementById('bottomNav').classList.add('visible');
-    showScreen('home');
+    if(state.activeWorkout){
+      document.getElementById('workoutTitle').value = state.activeWorkout.title;
+      showScreen('workout');
+      renderWorkout();
+      startWorkoutTimer();
+    } else {
+      showScreen('home');
+    }
     document.getElementById('loginStatus').textContent = "";
   } catch(err){
     console.error(err);
@@ -1442,6 +1483,14 @@ function renderWorkoutDetail(w){
 }
 
 /* ============ START / ACTIVE WORKOUT ============ */
+function persistActiveWorkout(){
+  if(state.activeWorkout){
+    localStorage.setItem('chalkline_active_workout', JSON.stringify(state.activeWorkout));
+  } else {
+    localStorage.removeItem('chalkline_active_workout');
+  }
+}
+
 function startWorkout(){
   state.activeWorkout = {
     id: String(Date.now()),
@@ -1453,6 +1502,7 @@ function startWorkout(){
   showScreen('workout');
   renderWorkout();
   startWorkoutTimer();
+  persistActiveWorkout();
 }
 
 function startWorkoutTimer(){
@@ -1482,6 +1532,7 @@ function updateWorkoutStats(){
 document.addEventListener('input', (e)=>{
   if(e.target.id === 'workoutTitle' && state.activeWorkout){
     state.activeWorkout.title = e.target.value || "Workout";
+    persistActiveWorkout();
   }
 });
 
@@ -1491,10 +1542,12 @@ function renderWorkout(){
   if(!w || w.exercises.length === 0){
     container.innerHTML = '';
     updateWorkoutStats();
+    persistActiveWorkout();
     return;
   }
   container.innerHTML = w.exercises.map((ex, exIdx) => exerciseCardHTML(ex, exIdx)).join('');
   updateWorkoutStats();
+  persistActiveWorkout();
 }
 
 function exerciseCardHTML(ex, exIdx){
@@ -1531,6 +1584,7 @@ function exerciseCardHTML(ex, exIdx){
 function updateSet(exIdx, sIdx, field, value){
   state.activeWorkout.exercises[exIdx].sets[sIdx][field] = value;
   updateWorkoutStats();
+  persistActiveWorkout();
 }
 
 function addSet(exIdx){
@@ -1572,6 +1626,7 @@ function cancelWorkout(){
   clearInterval(workoutTimerInterval);
   stopRest();
   state.activeWorkout = null;
+  persistActiveWorkout();
   showScreen('home');
 }
 
@@ -1601,6 +1656,7 @@ async function finishWorkout(){
     await saveWorkoutToSheet(w);
     state.history.push(w);
     state.activeWorkout = null;
+    persistActiveWorkout();
     showScreen('home');
     showToast(w.prCount > 0 ? `Saved — ${w.prCount} new PR${w.prCount>1?'s':''}!` : "Workout saved");
   } catch(err){
