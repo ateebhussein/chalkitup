@@ -132,15 +132,18 @@
     background: var(--accent);
     color: var(--accent-ink);
   }
-  .signout-link {
+  .settings-btn {
     background: none;
-    border: none;
-    color: var(--ink-faint);
-    font-size: 12px;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-size: 16px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     cursor: pointer;
     display: none;
   }
-  .signout-link.visible { display: inline; }
+  .settings-btn.visible { display: inline-flex; align-items: center; justify-content: center; }
 
   /* ---------- Screens ---------- */
   .screen { display: none; padding: 18px; }
@@ -408,7 +411,6 @@
     text-align: center;
     padding: 8px 4px 4px;
   }
-  .sets-table th:first-child, .sets-table td:first-child { text-align: left; padding-left: 14px; }
   .sets-table td { padding: 5px 4px; text-align: center; }
   .sets-table .prev-cell { color: var(--ink-faint); font-size: 12px; }
   .sets-table input[type="number"] {
@@ -700,11 +702,7 @@
   <div class="topbar">
     <div class="brand"><span class="mark"></span><h1>Chalkline</h1></div>
     <div class="topbar-right">
-      <button class="signout-link" id="signoutBtn" onclick="signOut()">Sign out</button>
-      <div class="unit-toggle">
-        <button id="unitKg" class="active" onclick="setUnit('kg')">KG</button>
-        <button id="unitLb" onclick="setUnit('lb')">LB</button>
-      </div>
+      <button class="settings-btn" id="settingsBtn" onclick="openSettings()">&#9881;</button>
     </div>
   </div>
 
@@ -822,7 +820,7 @@
     </div>
   </div>
 
-  <!-- ===== CSV IMPORT OVERLAY (first login) ===== -->
+  <!-- ===== CSV IMPORT OVERLAY ===== -->
   <div class="overlay" id="importOverlay">
     <div class="sheet">
       <div class="sheet-head">
@@ -832,10 +830,53 @@
       </div>
       <div class="import-body">
         <p>Have a Strong app export? Import it now to bring all your past workouts into this sheet — you'll be able to browse them right here.</p>
+        <div class="section-label" style="margin-top:0;">What units is the CSV in?</div>
+        <div class="unit-toggle" id="importUnitToggle" style="margin-bottom:20px;">
+          <button data-unit="kg" class="active" onclick="setImportUnit('kg')">KG</button>
+          <button data-unit="lb" onclick="setImportUnit('lb')">LB</button>
+        </div>
         <button class="start-btn" onclick="document.getElementById('csvFileInput').click()">Choose CSV File</button>
-        <div class="cancel-link" onclick="skipImport()">Skip for now</div>
+        <div class="cancel-link" id="importSkipBtn" onclick="skipImport()">Skip for now</div>
         <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
         <div id="importStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== UNIT SETUP OVERLAY (first login) ===== -->
+  <div class="overlay" id="unitSetupOverlay">
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="sheet-head-top">
+          <h2 style="font-size:17px;">Choose Your Units</h2>
+        </div>
+      </div>
+      <div class="import-body">
+        <p>How do you want to log weight? This is set up once — you can still change it later in Settings.</p>
+        <button class="start-btn" onclick="chooseUnitSetup('kg')">Kilograms (KG)</button>
+        <button class="start-btn" style="background:var(--surface-2);color:var(--ink);margin-top:10px;" onclick="chooseUnitSetup('lb')">Pounds (LB)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS OVERLAY ===== -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="sheet-head-top">
+          <h2 style="font-size:17px;">Settings</h2>
+          <button class="close-x" onclick="closeSettings()">&times;</button>
+        </div>
+      </div>
+      <div class="import-body">
+        <div class="section-label" style="margin-top:0;">Units</div>
+        <div class="unit-toggle" id="settingsUnitToggle" style="margin-bottom:24px;">
+          <button data-unit="kg" onclick="setUnit('kg')">KG</button>
+          <button data-unit="lb" onclick="setUnit('lb')">LB</button>
+        </div>
+        <div class="section-label">Data</div>
+        <button class="add-exercise-btn" style="margin-bottom:20px;" onclick="openSettingsImport()">Import from Strong CSV</button>
+        <div class="cancel-link" style="color:var(--danger);" onclick="signOutFromSettings()">Sign out</div>
       </div>
     </div>
   </div>
@@ -902,10 +943,16 @@ let restInterval = null;
 let restRemaining = 0;
 let workoutTimerInterval = null;
 let detailReturnScreen = 'home';
+let importContext = 'onboarding';
+let importCsvUnit = 'kg';
 
 /* ============ INIT ============ */
 function init(){
   document.getElementById('todayDate').textContent = new Date().toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+
+  const savedUnit = localStorage.getItem('chalkline_unit');
+  if(savedUnit === 'kg' || savedUnit === 'lb') state.unit = savedUnit;
+  syncUnitButtons();
 
   const savedRest = Number(localStorage.getItem('chalkline_rest_default'));
   if(savedRest && REST_PRESETS.includes(savedRest)) state.restDefault = savedRest;
@@ -934,9 +981,39 @@ function setupGoogle(){
 
 function setUnit(u){
   state.unit = u;
-  document.getElementById('unitKg').classList.toggle('active', u==='kg');
-  document.getElementById('unitLb').classList.toggle('active', u==='lb');
+  localStorage.setItem('chalkline_unit', u);
+  syncUnitButtons();
   if(state.activeWorkout) renderWorkout();
+}
+
+function syncUnitButtons(){
+  document.querySelectorAll('#settingsUnitToggle button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.unit === state.unit);
+  });
+}
+
+function setImportUnit(u){
+  importCsvUnit = u;
+  document.querySelectorAll('#importUnitToggle button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.unit === u);
+  });
+}
+
+/* ============ SETTINGS ============ */
+function openSettings(){
+  syncUnitButtons();
+  document.getElementById('settingsOverlay').classList.add('visible');
+}
+function closeSettings(){
+  document.getElementById('settingsOverlay').classList.remove('visible');
+}
+function signOutFromSettings(){
+  closeSettings();
+  signOut();
+}
+function openSettingsImport(){
+  closeSettings();
+  openImportOverlay('manual');
 }
 
 function showScreen(name){
@@ -974,7 +1051,7 @@ function signOut(){
   spreadsheetId = null;
   state.history = [];
   state.activeWorkout = null;
-  document.getElementById('signoutBtn').classList.remove('visible');
+  document.getElementById('settingsBtn').classList.remove('visible');
   document.getElementById('bottomNav').classList.remove('visible');
   showScreen('login');
 }
@@ -989,22 +1066,37 @@ async function onTokenResponse(resp){
   try {
     await connectSpreadsheet();
     document.getElementById('loginStatus').textContent = "";
-    if(!localStorage.getItem('chalkline_import_prompted')){
-      document.getElementById('importOverlay').classList.add('visible');
+    if(!localStorage.getItem('chalkline_unit_setup')){
+      document.getElementById('unitSetupOverlay').classList.add('visible');
       return;
     }
-    await finishLogin();
+    await continueAfterUnitSetup();
   } catch(err){
     console.error(err);
     document.getElementById('loginStatus').textContent = "Couldn't reach Google Sheets. Check the setup guide and try again.";
   }
 }
 
+function chooseUnitSetup(u){
+  setUnit(u);
+  localStorage.setItem('chalkline_unit_setup', '1');
+  document.getElementById('unitSetupOverlay').classList.remove('visible');
+  continueAfterUnitSetup();
+}
+
+async function continueAfterUnitSetup(){
+  if(!localStorage.getItem('chalkline_import_prompted')){
+    openImportOverlay('onboarding');
+    return;
+  }
+  await finishLogin();
+}
+
 async function finishLogin(){
   document.getElementById('loginStatus').textContent = "Loading your history...";
   try {
     await loadHistoryFromSheet();
-    document.getElementById('signoutBtn').classList.add('visible');
+    document.getElementById('settingsBtn').classList.add('visible');
     document.getElementById('bottomNav').classList.add('visible');
     showScreen('home');
     document.getElementById('loginStatus').textContent = "";
@@ -1124,10 +1216,31 @@ function parseCSV(text){
   return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ''));
 }
 
+function openImportOverlay(context){
+  importContext = context;
+  importCsvUnit = state.unit;
+  document.querySelectorAll('#importUnitToggle button').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.unit === importCsvUnit);
+  });
+  document.getElementById('importSkipBtn').textContent = context === 'onboarding' ? 'Skip for now' : 'Cancel';
+  document.getElementById('importStatus').textContent = '';
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('importOverlay').classList.add('visible');
+}
+
 function skipImport(){
-  localStorage.setItem('chalkline_import_prompted', '1');
   document.getElementById('importOverlay').classList.remove('visible');
-  finishLogin();
+  if(importContext === 'onboarding'){
+    localStorage.setItem('chalkline_import_prompted', '1');
+    finishLogin();
+  }
+}
+
+function convertWeightUnit(weight, fromUnit, toUnit){
+  const n = Number(weight);
+  if(!Number.isFinite(n) || fromUnit === toUnit) return weight;
+  const converted = fromUnit === 'lb' ? n * 0.453592 : n * 2.20462;
+  return Math.round(converted * 100) / 100;
 }
 
 async function handleCSVImport(e){
@@ -1141,11 +1254,13 @@ async function handleCSVImport(e){
     if(allRows.length && String(allRows[0][0]).trim().toLowerCase() === 'date'){
       allRows.shift();
     }
+    const needsConversion = importCsvUnit !== state.unit;
     const dataRows = allRows
       .filter(r => r[0] && r[3])
       .map(r => {
         const [date, name, duration, exName, setOrder, weight, reps, distance, seconds, notes, workoutNotes, rpe] = r;
-        return [date||'', name||'', duration||'', exName||'', setOrder||'', weight||'0', reps||'0', distance||'0', seconds||'0', notes||'', workoutNotes||'', rpe||''];
+        const w = needsConversion ? convertWeightUnit(weight||'0', importCsvUnit, state.unit) : (weight||'0');
+        return [date||'', name||'', duration||'', exName||'', setOrder||'', w, reps||'0', distance||'0', seconds||'0', notes||'', workoutNotes||'', rpe||''];
       });
     if(dataRows.length === 0){
       statusEl.textContent = "No workout rows found in that file.";
@@ -1163,11 +1278,16 @@ async function handleCSVImport(e){
       });
       if(!res.ok) throw new Error("Import request failed");
     }
-    statusEl.textContent = `Imported ${dataRows.length} rows.`;
-    localStorage.setItem('chalkline_import_prompted', '1');
-    setTimeout(()=>{
+    statusEl.textContent = `Imported ${dataRows.length} rows${needsConversion ? ` (converted ${importCsvUnit.toUpperCase()} → ${state.unit.toUpperCase()})` : ''}.`;
+    if(importContext === 'onboarding') localStorage.setItem('chalkline_import_prompted', '1');
+    setTimeout(async ()=>{
       document.getElementById('importOverlay').classList.remove('visible');
-      finishLogin();
+      if(importContext === 'onboarding'){
+        await finishLogin();
+      } else {
+        showToast("Import complete");
+        await loadHistoryFromSheet();
+      }
     }, 900);
   } catch(err){
     console.error(err);
