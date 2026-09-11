@@ -1,0 +1,23 @@
+name = "liftee-auth"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# --- Fill these in before deploying (see worker/README.md) ---
+kv_namespaces = [
+  { binding = "SESSIONS", id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
+]
+
+[vars]
+# Same Client ID already used by the app (index.html's GOOGLE_CLIENT_ID).
+GOOGLE_CLIENT_ID = "455918822553-b2obresfunqr096v5q7crel3g3khllk7.apps.googleusercontent.com"
+
+# The GitHub Pages URL the app is served from (no trailing slash).
+FRONTEND_URL = "https://ateebhussein.github.io/chalkitup"
+
+# This Worker's own public URL, once you know it (no trailing slash).
+# Update this AFTER your first deploy — wrangler prints the URL — then
+# redeploy so /callback builds the correct redirect_uri.
+WORKER_URL = "https://liftee-auth.YOUR-SUBDOMAIN.workers.dev"
+
+# GOOGLE_CLIENT_SECRET is NOT set here — it's a secret, not a var.
+# Set it with: wrangler secret put GOOGLE_CLIENT_SECRET
