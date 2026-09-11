@@ -16,7 +16,6 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Fraunces:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg: #15161B;
@@ -874,10 +873,11 @@
 
 <script>
 /* ======================================================================
-   CONFIG — paste your own Google Cloud OAuth Client ID below.
-   See the setup guide for how to create one. Nothing else needs editing.
+   CONFIG — paste your own Google Cloud OAuth Client ID below, and the
+   URL of your deployed auth Worker (see worker/README.md for setup).
    ====================================================================== */
 const GOOGLE_CLIENT_ID = "455918822553-b2obresfunqr096v5q7crel3g3khllk7.apps.googleusercontent.com";
+const AUTH_WORKER_URL = "https://liftee-auth.PASTE_YOUR_SUBDOMAIN.workers.dev";
 
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 // Kept as "Chalkline" (the app's old name) so existing users' spreadsheets are still found by this lookup.
@@ -926,9 +926,7 @@ let state = {
 
 let accessToken = null;
 let spreadsheetId = null;
-let tokenClient = null;
 let tokenRefreshTimer = null;
-let authPurpose = 'manual'; // 'manual' | 'silent-restore' | 'background-refresh'
 let restInterval = null;
 let workoutTimerInterval = null;
 let detailReturnScreen = 'home';
@@ -953,28 +951,38 @@ function init(){
     catch(e){ localStorage.removeItem('chalkline_active_workout'); }
   }
 
-  if(GOOGLE_CLIENT_ID.startsWith("PASTE_")){
-    document.getElementById('setupNote').textContent = "Setup needed: add your Google Client ID inside the code (see setup guide).";
+  if(GOOGLE_CLIENT_ID.startsWith("PASTE_") || AUTH_WORKER_URL.includes("PASTE_")){
+    document.getElementById('setupNote').textContent = "Setup needed: add your Google Client ID and auth Worker URL inside the code (see worker/README.md).";
   }
 
-  if(window.google && google.accounts){
-    setupGoogle();
-  } else {
-    // GIS script loads async — wait for it
-    window.addEventListener('load', () => setTimeout(setupGoogle, 300));
+  const justRedirected = consumeAuthRedirect();
+  if(localStorage.getItem('liftee_session_id')){
+    attemptAutoLogin(justRedirected);
   }
 }
 
-function setupGoogle(){
-  if(!window.google || !google.accounts) { setTimeout(setupGoogle, 300); return; }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: SCOPES,
-    callback: onTokenResponse,
-  });
-  if(localStorage.getItem('chalkline_had_session')){
-    attemptSilentRestore();
+function consumeAuthRedirect(){
+  const hash = window.location.hash;
+  if(!hash.startsWith('#session=') && !hash.startsWith('#auth_error=')) return false;
+  const params = new URLSearchParams(hash.slice(1));
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  if(params.has('auth_error')){
+    document.getElementById('loginStatus').textContent = "Sign-in failed. Please try again.";
+    return true;
   }
+
+  const sessionId = params.get('session');
+  const returnedState = params.get('state');
+  const expectedState = sessionStorage.getItem('liftee_oauth_state');
+  sessionStorage.removeItem('liftee_oauth_state');
+
+  if(!sessionId || returnedState !== expectedState){
+    document.getElementById('loginStatus').textContent = "Sign-in couldn't be verified. Please try again.";
+    return true;
+  }
+  localStorage.setItem('liftee_session_id', sessionId);
+  return true;
 }
 
 function setUnit(u){
@@ -1034,45 +1042,72 @@ function showToast(msg){
   setTimeout(()=> t.classList.remove('visible'), 2400);
 }
 
-/* ============ AUTH ============ */
+/* ============ AUTH ============
+   Uses a small Cloudflare Worker (worker/) as a token broker: it holds the
+   Google refresh token server-side and mints short-lived access tokens on
+   request. The browser never sees the refresh token, only an opaque
+   session id stored in localStorage — a plain first-party fetch() to our
+   own Worker, so it isn't affected by Safari blocking cross-site silent
+   auth (which is what broke the previous approach). See worker/README.md.
+   ============================================================ */
 function signIn(){
-  if(GOOGLE_CLIENT_ID.startsWith("PASTE_")){
-    showToast("Add your Google Client ID in the code first");
+  if(GOOGLE_CLIENT_ID.startsWith("PASTE_") || AUTH_WORKER_URL.includes("PASTE_")){
+    showToast("Backend not configured yet — see worker/README.md");
     return;
   }
-  if(!tokenClient){ showToast("Still loading Google sign-in, try again in a moment"); return; }
-  authPurpose = 'manual';
+  const oauthState = crypto.randomUUID();
+  sessionStorage.setItem('liftee_oauth_state', oauthState);
   document.getElementById('loginStatus').textContent = "";
-  tokenClient.requestAccessToken({prompt: ''});
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: AUTH_WORKER_URL.replace(/\/+$/,'') + '/callback',
+    response_type: 'code',
+    scope: SCOPES,
+    access_type: 'offline',
+    prompt: 'consent',
+    state: oauthState,
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 
-function attemptSilentRestore(){
-  if(!tokenClient) return;
-  authPurpose = 'silent-restore';
-  tokenClient.requestAccessToken({prompt: 'none'});
+async function fetchAccessToken(){
+  const sessionId = localStorage.getItem('liftee_session_id');
+  if(!sessionId) throw new Error('no_session');
+  const res = await fetch(AUTH_WORKER_URL.replace(/\/+$/,'') + '/token', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + sessionId },
+  });
+  if(!res.ok){
+    localStorage.removeItem('liftee_session_id');
+    throw new Error('token_fetch_failed');
+  }
+  const data = await res.json();
+  accessToken = data.access_token;
+  scheduleTokenRefresh(data.expires_in);
+  return accessToken;
 }
 
 function scheduleTokenRefresh(expiresInSeconds){
   clearTimeout(tokenRefreshTimer);
   const ms = Math.max(((expiresInSeconds || 3600) - 300) * 1000, 30000);
-  tokenRefreshTimer = setTimeout(()=>{
-    if(!tokenClient) return;
-    authPurpose = 'background-refresh';
-    tokenClient.requestAccessToken({prompt: 'none'});
-  }, ms);
+  tokenRefreshTimer = setTimeout(()=>{ fetchAccessToken().catch(()=>{}); }, ms);
 }
 
 function signOut(){
   clearTimeout(tokenRefreshTimer);
-  if(accessToken){
-    google.accounts.oauth2.revoke(accessToken, () => {});
+  const sessionId = localStorage.getItem('liftee_session_id');
+  if(sessionId){
+    fetch(AUTH_WORKER_URL.replace(/\/+$/,'') + '/revoke', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + sessionId },
+    }).catch(()=>{});
   }
+  localStorage.removeItem('liftee_session_id');
   accessToken = null;
   spreadsheetId = null;
   state.history = [];
   state.activeWorkout = null;
   localStorage.removeItem('chalkline_active_workout');
-  localStorage.removeItem('chalkline_had_session');
   clearInterval(workoutTimerInterval);
   stopAllRestTimers();
   document.getElementById('settingsBtn').classList.remove('visible');
@@ -1081,22 +1116,10 @@ function signOut(){
   showScreen('login');
 }
 
-async function onTokenResponse(resp){
-  if(resp.error){
-    if(authPurpose === 'manual'){
-      document.getElementById('loginStatus').textContent = "Sign-in was cancelled or failed. Try again.";
-    }
-    // silent-restore / background-refresh failures fail quietly — the login
-    // screen (with its normal Sign In button) is left as the fallback.
-    return;
-  }
-  accessToken = resp.access_token;
-  scheduleTokenRefresh(resp.expires_in);
-  if(authPurpose === 'background-refresh') return;
-
-  localStorage.setItem('chalkline_had_session', '1');
-  document.getElementById('loginStatus').textContent = "Connecting to your Google Sheet...";
+async function attemptAutoLogin(showErrors){
+  document.getElementById('loginStatus').textContent = "Signing you in...";
   try {
+    await fetchAccessToken();
     await connectSpreadsheet();
     document.getElementById('loginStatus').textContent = "";
     if(!localStorage.getItem('chalkline_unit_setup')){
@@ -1106,7 +1129,9 @@ async function onTokenResponse(resp){
     await continueAfterUnitSetup();
   } catch(err){
     console.error(err);
-    document.getElementById('loginStatus').textContent = "Couldn't reach Google Sheets. Check the setup guide and try again.";
+    document.getElementById('loginStatus').textContent = showErrors
+      ? "Sign-in failed. Please try again."
+      : "";
   }
 }
 
