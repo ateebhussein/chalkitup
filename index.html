@@ -715,7 +715,7 @@ const GOOGLE_CLIENT_ID = "455918822553-b2obresfunqr096v5q7crel3g3khllk7.apps.goo
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
 const FILE_NAME = "Chalkline Workout Data";
 const TAB_NAME = "WorkoutLog";
-const HEADER_ROW = ["WorkoutID","Date","WorkoutName","Duration","ExerciseName","Category","SetOrder","Weight","Unit","Reps","Done","PR"];
+const HEADER_ROW = ["Date","Workout Name","Duration","Exercise Name","Set Order","Weight","Reps","Distance","Seconds","Notes","Workout Notes","RPE"];
 
 /* ============ EXERCISE LIBRARY ============ */
 const EXERCISE_LIBRARY = [
@@ -865,9 +865,54 @@ async function connectSpreadsheet(){
   const data = await res.json();
   if(data.files && data.files.length > 0){
     spreadsheetId = data.files[0].id;
+    await ensureCorrectHeader();
   } else {
     spreadsheetId = await createSpreadsheet();
   }
+}
+
+async function ensureCorrectHeader(){
+  const headerRange = encodeURIComponent(TAB_NAME + '!A1:L1');
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${headerRange}`, {headers: authHeaders()});
+  if(!res.ok) return;
+  const data = await res.json();
+  const currentHeader = (data.values && data.values[0]) || [];
+  const matches = HEADER_ROW.length === currentHeader.length && HEADER_ROW.every((h,i) => currentHeader[i] === h);
+  if(matches) return;
+
+  if(currentHeader[0] === 'WorkoutID'){
+    await migrateLegacyRows();
+  } else {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(TAB_NAME+'!A1')}?valueInputOption=RAW`, {
+      method: 'PUT',
+      headers: {...authHeaders(), 'Content-Type':'application/json'},
+      body: JSON.stringify({ values: [HEADER_ROW] })
+    });
+  }
+}
+
+async function migrateLegacyRows(){
+  const range = encodeURIComponent(TAB_NAME + '!A2:L100000');
+  const getRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`, {headers: authHeaders()});
+  if(!getRes.ok) return;
+  const data = await getRes.json();
+  const oldRows = data.values || [];
+  const newRows = oldRows
+    .filter(r => r[4])
+    .map(r => {
+      const [id, date, name, duration, exName, cat, setOrder, weight, unit, reps] = r;
+      return [date||'', name||'', duration||'', exName||'', setOrder||'', weight||'', reps||'', 0, 0, '', '', ''];
+    });
+
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(TAB_NAME)}:clear`, {
+    method: 'POST',
+    headers: authHeaders()
+  });
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(TAB_NAME+'!A1')}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: {...authHeaders(), 'Content-Type':'application/json'},
+    body: JSON.stringify({ values: [HEADER_ROW, ...newRows] })
+  });
 }
 
 async function createSpreadsheet(){
@@ -899,28 +944,46 @@ async function loadHistoryFromSheet(){
   const rows = data.values || [];
   const workoutsMap = {};
   rows.forEach(r => {
-    const [id, date, name, duration, exName, cat, setOrder, weight, unit, reps, done, pr] = r;
-    if(!id || !exName) return;
-    if(!workoutsMap[id]) workoutsMap[id] = {id, date, title:name, duration, exMap: {}, prCount: 0};
-    const w = workoutsMap[id];
-    if(!w.exMap[exName]) w.exMap[exName] = {name: exName, cat: cat||'', sets: []};
+    const [date, name, duration, exName, setOrder, weight, reps] = r;
+    if(!date || !exName) return;
+    const key = date + '|' + name + '|' + duration;
+    if(!workoutsMap[key]) workoutsMap[key] = {id: key, date, title:name, duration, exMap: {}};
+    const w = workoutsMap[key];
+    if(!w.exMap[exName]) w.exMap[exName] = {name: exName, cat: '', sets: []};
     w.exMap[exName].sets.push({weight, reps, done: true, prev: null});
-    if(pr === 'TRUE') w.prCount++;
   });
   state.history = Object.values(workoutsMap)
     .map(w => ({...w, exercises: Object.values(w.exMap)}))
-    .sort((a,b) => Number(a.id) - Number(b.id));
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  computePRs(state.history);
   renderHome();
 }
 
-async function saveWorkoutToSheet(w, prExerciseNames){
+function computePRs(history){
+  const bestSoFar = {};
+  history.forEach(w => {
+    const prNames = new Set();
+    w.exercises.forEach(ex => {
+      const bestThis = Math.max(0, ...ex.sets.map(s => Number(s.weight)||0));
+      const priorBest = bestSoFar[ex.name] || 0;
+      if(bestThis > 0 && bestThis > priorBest) prNames.add(ex.name);
+    });
+    w.prCount = prNames.size;
+    w.exercises.forEach(ex => {
+      const bestThis = Math.max(0, ...ex.sets.map(s => Number(s.weight)||0));
+      bestSoFar[ex.name] = Math.max(bestSoFar[ex.name] || 0, bestThis);
+    });
+  });
+}
+
+async function saveWorkoutToSheet(w){
   const rows = [];
   w.exercises.forEach(ex => {
     let order = 0;
     ex.sets.forEach(s => {
       if(!s.done) return;
       order++;
-      rows.push([w.id, w.date, w.title, w.duration, ex.name, ex.cat, order, s.weight, state.unit, s.reps, 'TRUE', prExerciseNames.has(ex.name) ? 'TRUE' : 'FALSE']);
+      rows.push([w.date, w.title, w.duration, ex.name, order, s.weight, s.reps, 0, 0, '', '', '']);
     });
   });
   if(rows.length === 0) return;
@@ -970,7 +1033,7 @@ function historyCardHTML(w){
   return `<div class="history-card">
     <div class="hc-top">
       <div class="hc-title">${escapeHtml(w.title)}${prBadge}</div>
-      <div class="hc-date">${escapeHtml(w.date)}</div>
+      <div class="hc-date">${escapeHtml(prettyDate(w.date))}</div>
     </div>
     <div class="hc-meta">${exCount} exercise${exCount!==1?'s':''} · ${setCount} sets · ${escapeHtml(w.duration||'')}</div>
   </div>`;
@@ -1088,9 +1151,8 @@ async function finishWorkout(){
   stopRest();
 
   const secs = Math.floor((Date.now() - w.startedAt)/1000);
-  const mins = Math.max(1, Math.round(secs/60));
-  w.duration = mins + " min";
-  w.date = new Date().toLocaleDateString(undefined, {month:'short', day:'numeric'});
+  w.duration = formatDuration(secs);
+  w.date = formatDateTime(new Date(w.startedAt));
 
   const prExerciseNames = new Set();
   w.exercises.forEach(ex => {
@@ -1102,7 +1164,7 @@ async function finishWorkout(){
 
   showToast("Saving to Google Sheets...");
   try {
-    await saveWorkoutToSheet(w, prExerciseNames);
+    await saveWorkoutToSheet(w);
     state.history.push(w);
     state.activeWorkout = null;
     showScreen('home');
@@ -1169,6 +1231,22 @@ function pickExercise(name, cat){
 }
 
 /* ============ UTIL ============ */
+function formatDateTime(d){
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function formatDuration(totalSeconds){
+  const mins = Math.max(1, Math.round(totalSeconds/60));
+  const h = Math.floor(mins/60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function prettyDate(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(String(dateStr).replace(' ', 'T'));
+  if(isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+}
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
